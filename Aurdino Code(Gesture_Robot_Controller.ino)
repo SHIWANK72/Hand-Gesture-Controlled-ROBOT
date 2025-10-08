@@ -1,0 +1,85 @@
+/*******************************************************************************
+ *
+ * Project: Hand Gesture Controlled Car
+ * Author: Shiwank Gupta
+ *
+ * Description: This sketch uses an MPU6050 IMU to read hand gestures
+ * and control a robotic car. The car's movement is determined by the
+ * tilt of the sensor.
+ *
+ ******************************************************************************/
+
+// === Libraries ===
+#include <Wire.h>
+#include <I2Cdev.h>
+#include <MPU6050.h>
+
+// === Objects ===
+MPU6050 accelgyro;
+
+// === Pin Definitions for L298N Motor Driver ===
+const int MOTOR_A_IN1 = 2;
+const int MOTOR_A_IN2 = 3;
+const int MOTOR_B_IN1 = 4;
+const int MOTOR_B_IN2 = 5;
+
+// === Global Variables & Constants ===
+int16_t ax, ay, az; // Raw accelerometer values
+const int GESTURE_THRESHOLD = 8000; // Sensitivity for tilt detection
+
+// === Function to control motors ===
+void controlMotors(int a1, int a2, int b1, int b2) {
+    digitalWrite(MOTOR_A_IN1, a1);
+    digitalWrite(MOTOR_A_IN2, a2);
+    digitalWrite(MOTOR_B_IN1, b1);
+    digitalWrite(MOTOR_B_IN2, b2);
+}
+
+// === Main Program ===
+void setup() {
+    Wire.begin();
+    Serial.begin(9600);
+
+    // Initialize MPU6050
+    accelgyro.initialize();
+    if (!accelgyro.testConnection()) {
+        Serial.println("MPU6050 connection failed!");
+        while (1);
+    }
+    Serial.println("MPU6050 Initialized.");
+
+    // Setup motor pins as outputs
+    pinMode(MOTOR_A_IN1, OUTPUT);
+    pinMode(MOTOR_A_IN2, OUTPUT);
+    pinMode(MOTOR_B_IN1, OUTPUT);
+    pinMode(MOTOR_B_IN2, OUTPUT);
+}
+
+void loop() {
+    // Read raw acceleration data
+    accelgyro.getAcceleration(&ax, &ay, &az);
+
+    // Interpret the gesture based on tilt thresholds
+    if (ay > GESTURE_THRESHOLD) {
+        Serial.println("Command: FORWARD");
+        controlMotors(HIGH, LOW, HIGH, LOW); // Move Forward
+    }
+    else if (ay < -GESTURE_THRESHOLD) {
+        Serial.println("Command: BACKWARD");
+        controlMotors(LOW, HIGH, LOW, HIGH); // Move Backward
+    }
+    else if (ax > GESTURE_THRESHOLD) {
+        Serial.println("Command: RIGHT");
+        controlMotors(HIGH, LOW, LOW, HIGH); // Turn Right
+    }
+    else if (ax < -GESTURE_THRESHOLD) {
+        Serial.println("Command: LEFT");
+        controlMotors(LOW, HIGH, HIGH, LOW); // Turn Left
+    }
+    else {
+        Serial.println("Command: STOP");
+        controlMotors(LOW, LOW, LOW, LOW); // Stop
+    }
+
+    delay(200); // A small delay for stability
+}
